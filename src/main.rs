@@ -5,14 +5,13 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 // Color_Print adiciona tags alá XML para estilo de prints e str.
 use color_print::{cprint, cprintln};
 // Crossterm dá várias funções extras para um CLI.
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use crossterm::{cursor, execute};
 // Rustyline simplifica read_line, e adiciona mais recursos.
 use rustyline::{DefaultEditor, Result};
 use std::cmp;
 use std::io::stdout;
-use std::num::ParseIntError;
 // use std::{thread, time::Duration};
 
 // Layout é quantos caracteres há em cada argumento do código de barras
@@ -30,19 +29,19 @@ const LAYOUT: [u8; 10] = [3, 1, 11, 4, 8, 7, 3, 1, 2, 4];
 //  39      40      Exercício (AA)
 //  41      44      Tributo
 
-// Macro para simplificar o texto de leitura de tecla.
-//
-// macro: apertar_tecla
-// param: $a, Char que representa a tecla
-macro_rules! apertar_tecla {
-    ($a:expr) => {
-        Event::Key(KeyEvent {
-            code: KeyCode::Char($a),
-            modifiers: KeyModifiers::NONE,
+// Lê o carac. que o usuário digitou, pego da demo interativa do crossterm.
+fn read_char() -> std::io::Result<char> {
+    loop {
+        if let Ok(Event::Key(KeyEvent {
+            code: KeyCode::Char(c),
             kind: KeyEventKind::Press,
-            state: KeyEventState::NONE,
-        })
-    };
+            modifiers: _,
+            state: _,
+        })) = crossterm::event::read()
+        {
+            return Ok(c);
+        }
+    }
 }
 
 // Divide uma string, pela quantidade de caracteres providos pelo parâmetro.
@@ -119,12 +118,13 @@ fn main() -> Result<()> {
                 cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
                 cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
                 enable_raw_mode().unwrap();
-                break match read().unwrap() {
-                    apertar_tecla!('s') | apertar_tecla!(' ') => {
+                match read_char()? {
+                    's' | ' ' => {
                         _cod_barras_lido = String::from(&ctx.get_contents().unwrap());
                         disable_raw_mode().unwrap();
+                        break;
                     }
-                    apertar_tecla!('n') | _ => continue,
+                    'n' | _ => (),
                 };
             }
             _ => (),
@@ -162,12 +162,6 @@ fn main() -> Result<()> {
         };
     }
 
-    // Se o código não for composto apenas por números, dê pânico e feche o programa.
-    let _ = match (&cod_barras_liq).parse::<usize>() {
-        Ok(usize) => usize,
-        Err(_) => panic!("Esse código de barras não é valido, fechando..."),
-    };
-
     drop(_cod_barras_lido);
 
     // println!("{}", cod_barras_liq);
@@ -176,6 +170,12 @@ fn main() -> Result<()> {
 
     for i in 0..LAYOUT.len() {
         (cod_barras_arr[i], cod_barras_liq) = dividir_string(cod_barras_liq, LAYOUT[i]);
+
+        // Se o código não for composto apenas por números, dê pânico e feche o programa.
+        let _ = match (&cod_barras_arr[i]).parse::<usize>() {
+            Ok(usize) => usize,
+            Err(_) => panic!("Esse código de barras não é valido, fechando..."),
+        };
     }
 
     loop {
@@ -190,8 +190,8 @@ fn main() -> Result<()> {
         lista_cod(&cod_barras_arr);
 
         enable_raw_mode().unwrap();
-        match read().unwrap() {
-            apertar_tecla!('v') => {
+        match read_char()? {
+            'v' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite o valor novo <i>com todas as casas decimais</>.</>");
@@ -220,7 +220,7 @@ fn main() -> Result<()> {
                     break;
                 }
             }
-            apertar_tecla!('d') => {
+            'd' => {
                 // let data_tmp = NaiveDate::parse_from_str(&cod_barras_arr[4], "%d/%m/%Y").unwrap();
                 disable_raw_mode().unwrap();
                 let mut valor_tmp: String = String::new();
@@ -254,7 +254,7 @@ fn main() -> Result<()> {
                     break;
                 }
             }
-            apertar_tecla!('g') => {
+            'g' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite o novo número da guia:</>");
@@ -264,7 +264,7 @@ fn main() -> Result<()> {
 
                 cod_barras_arr[5] = format!("{:0>7}", valor_tmp);
             }
-            apertar_tecla!('p') => {
+            'p' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite a nova parcela:</>");
@@ -274,7 +274,7 @@ fn main() -> Result<()> {
 
                 cod_barras_arr[6] = format!("{:0>3}", valor_tmp);
             }
-            apertar_tecla!('e') => {
+            'e' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite o novo exercício:</>");
@@ -284,7 +284,7 @@ fn main() -> Result<()> {
 
                 cod_barras_arr[8] = valor_tmp;
             }
-            apertar_tecla!('t') => {
+            't' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite o código do novo tributo:</>");
@@ -293,15 +293,14 @@ fn main() -> Result<()> {
 
                 cod_barras_arr[9] = format!("{:0>4}", valor_tmp);
             }
-            apertar_tecla!('s') => {
+            's' => {
                 ctx.set_contents(format!("{:?}", cod_barras_arr).to_owned())
                     .unwrap();
                 break;
             }
-            Event::Key(_) => {
+            _ => {
                 break;
             }
-            _ => (),
         }
     }
 
