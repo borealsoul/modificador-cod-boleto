@@ -79,8 +79,9 @@ fn main() -> Result<()> {
 
     // println!("{}", cod_barras_liq);
 
+    // Cria a array cod_barras_arr, e a preenche com os dígitos do cod_barras_liq, usando o LAYOUT
+    // como base.
     let mut cod_barras_arr: [String; 10] = Default::default();
-
     for i in 0..LAYOUT.len() {
         (cod_barras_arr[i], cod_barras_liq) = dividir_string(cod_barras_liq, LAYOUT[i]);
 
@@ -92,6 +93,7 @@ fn main() -> Result<()> {
     }
 
     loop {
+        // Limpa a tela do terminal.
         execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
 
         cprint!("<cyan, bold>O código de barras atual é:</> ");
@@ -104,11 +106,15 @@ fn main() -> Result<()> {
 
         enable_raw_mode().unwrap();
         match read_char()? {
+            // Caso o usuário escolha mudar o valor:
+            // valor_guia é um float com os dígitos da guia.
+            // Se o valor_tmp lido do input, sem virgulas ou pontos,
+            // for possível converter para f32.
+            // Formate-o como string, preenchendo-o de zeros até dar 11 dígitos.
             'v' => {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite o valor novo <i>com todas as casas decimais</>.</>");
-
                 let valor_guia = &cod_barras_arr[2].parse::<f32>().unwrap() / 100.0;
 
                 loop {
@@ -133,12 +139,14 @@ fn main() -> Result<()> {
                     break;
                 }
             }
+            // Converte a data_tmp do valor original da array de AAAAMMDD para DD/MM/AAAA.
+            // Se o valor digitado tiver 10 dígitos, e for um NaiveDate válido,
+            // devolva-o reformatado como AAAAMMDD para a array.
             'd' => {
-                // let data_tmp = NaiveDate::parse_from_str(&cod_barras_arr[4], "%d/%m/%Y").unwrap();
                 disable_raw_mode().unwrap();
-                let mut valor_tmp: String = String::new();
 
                 cprintln!("<green, bold>Digite a nova data <i>com barras entre os números</>.</>");
+                let mut valor_tmp: String = String::new();
 
                 loop {
                     let data_tmp: String = NaiveDate::parse_from_str(&cod_barras_arr[4], "%Y%m%d")
@@ -181,7 +189,7 @@ fn main() -> Result<()> {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite a nova parcela:</>");
-                let parcela_tmp = &cod_barras_arr[6].parse::<u16>().unwrap();
+                let parcela_tmp = &cod_barras_arr[6].parse::<u8>().unwrap();
                 let valor_tmp: String =
                     rl.readline_with_initial("> ", (&parcela_tmp.to_string(), ""))?;
 
