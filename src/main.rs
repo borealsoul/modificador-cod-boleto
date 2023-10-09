@@ -206,12 +206,14 @@ fn main() -> Result<()> {
 
                 cod_barras_arr[9] = format!("{:0>4}", valor_tmp);
             }
-            's' => {
-                ctx.set_contents(format!("{:?}", cod_barras_arr).to_owned())
-                    .unwrap();
-                break;
-            }
-            _ => {
+            's' | _ => {
+                let mut valor_tmp: String = String::new();
+
+                for i in 0..=LAYOUT.len() {
+                    valor_tmp += &cod_barras_arr[i];
+                }
+
+                ctx.set_contents(valor_tmp.to_owned()).unwrap();
                 break;
             }
         }
