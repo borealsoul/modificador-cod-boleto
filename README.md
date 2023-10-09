@@ -12,8 +12,12 @@ Após inserir o código de barras, pode-se escolher a opção digitando a tecla 
 Ao terminar é possível copiar o código pronto da tela, ou ao apertar _Sair_ o código é automáticamente copiado para a área de transferência.
 
 ## Créditos
-[chronotope/chrono](https://github.com/chronotope/chrono)\n
-[aweinstock314/rust-clipboard](https://github.com/aweinstock314/rust-clipboard)\n
-[dajoha/color-print](https://gitlab.com/dajoha/color-print)\n
-[crossterm-rs/crossterm](https://github.com/crossterm-rs/crossterm)\n
+[chronotope/chrono](https://github.com/chronotope/chrono)
+
+[aweinstock314/rust-clipboard](https://github.com/aweinstock314/rust-clipboard)
+
+[dajoha/color-print](https://gitlab.com/dajoha/color-print)
+
+[crossterm-rs/crossterm](https://github.com/crossterm-rs/crossterm)
+
 [kkawakam/rustyline](https://github.com/kkawakam/rustyline)
