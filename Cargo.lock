@@ -313,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "mod_cod_barras"
-version = "0.0.97"
+version = "0.0.92"
 dependencies = [
  "chrono",
  "clipboard",
