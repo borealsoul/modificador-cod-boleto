@@ -69,12 +69,12 @@ pub fn lista_cod(cod_barras: &[String; 10]) {
     // Para i entre 5 e o tamanho do Layout (9)
     // converta o valor do cod_barras respectivo para unsign16
     // e o imprima.
-    for i in 5..crate::LAYOUT.len() {
-        match i {
+    for (indice, codigo) in cod_barras.iter().enumerate() {
+        match indice {
             5 | 6 | 8 | 9 => {
-                let cod_tmp: &u16 = &cod_barras[i].parse::<u16>().unwrap();
+                let cod_tmp: &u16 = &codigo.parse::<u16>().unwrap();
 
-                match i {
+                match indice {
                     5 => cprintln!("<blue, bold>Núm. da <u>G</>uia:</> {cod_tmp}"),
                     6 => cprintln!("<blue, bold><u>P</>arcela:</> {cod_tmp}"),
                     8 => cprintln!("<blue, bold><u>E</>xercício:</> 20{cod_tmp}"),
