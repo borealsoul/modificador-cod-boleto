@@ -1,17 +1,11 @@
-use mod_cod_barras::*;
-// Chrono ajuda a lidar com strings relacionadas a datas.
 use chrono::NaiveDate;
-// Clipboard lê o texto copiado pelo sistema, e devolve o texto final.
 use clipboard::{ClipboardContext, ClipboardProvider};
-// Color_Print adiciona tags alá XML para estilo de prints e str.
 use color_print::{cprint, cprintln};
-// Crossterm dá várias funções extras para um CLI.
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use crossterm::{cursor, execute};
-// Rustyline simplifica read_line, e adiciona mais recursos.
+use mod_cod_barras::*;
 use rustyline::{DefaultEditor, Result};
 use std::io::stdout;
-// use std::{thread, time::Duration};
 
 fn main() -> Result<()> {
     // rl é um atalho para read_line de rustyline
@@ -23,42 +17,41 @@ fn main() -> Result<()> {
     // ctx é o atalho para acessar o ctrl-c, provido pelo clipboard
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
 
-    loop {
-        // se o conteudo do ctrl-c do usuário tiver 55 carac., tamanho de um código de barras,
-        // pergunte se ele quer usar este.
-        match &ctx.get_contents().unwrap().len() {
-            55 => {
-                cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
-                cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
-                enable_raw_mode().unwrap();
-                match read_char()? {
-                    's' | ' ' => {
-                        _cod_barras_lido = String::from(&ctx.get_contents().unwrap());
-                        disable_raw_mode().unwrap();
-                        break;
-                    }
-                    'n' | _ => (),
-                };
-            }
-            _ => (),
-        };
-        disable_raw_mode().unwrap();
+    // se o conteudo do ctrl-c do usuário tiver 55 carac., tamanho de um código de barras,
+    // pergunte se ele quer usar este.
+    if ctx.get_contents().unwrap().len() == 55 {
+        loop {
+            disable_raw_mode().unwrap();
+            execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+            cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
+            cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
+            enable_raw_mode().unwrap();
+            break match read_char()? {
+                's' | ' ' => {
+                    _cod_barras_lido = String::from(&ctx.get_contents().unwrap());
+                }
+                'n' => (),
+                _ => continue,
+            };
+        }
+    };
 
-        // Pede para o usuário digitar o código de barras desejado, caso ele não tenha 55 carac.,
-        // repita o pedido.
-        cprintln!("<green, bold>Digite o código de barras:</> ");
-        _cod_barras_lido = String::from(rl.readline("> ")?.trim());
+    disable_raw_mode().unwrap();
 
-        // println!("{} Caracteres.", &cod_barras_lido.len());
+    if _cod_barras_lido.is_empty() {
+        loop {
+            // Pede para o usuário digitar o código de barras desejado, caso ele não tenha 55 carac.,
+            // repita o pedido.
+            cprintln!("<green, bold>Digite o código de barras:</> ");
+            _cod_barras_lido = String::from(rl.readline("> ")?.trim());
 
-        // https://www.reddit.com/r/rust/comments/obnlv8/some_neat_rust_syntax_loop_break_match/
-        break match &_cod_barras_lido.len() {
-            55 => (),
-            _ => {
+            if _cod_barras_lido.len() != 55 {
                 cprintln!("<y, bold>Há um problema com seu código, favor verifique.</>");
                 continue;
             }
-        };
+
+            break;
+        }
     }
 
     // Limpa o código de barras copiado, tirando os dígitos verificadores e etc.
@@ -77,18 +70,15 @@ fn main() -> Result<()> {
 
     drop(_cod_barras_lido);
 
-    // println!("{}", cod_barras_liq);
-
     // Cria a array cod_barras_arr, e a preenche com os dígitos do cod_barras_liq, usando o LAYOUT
     // como base.
     let mut cod_barras_arr: [String; 10] = Default::default();
-    for i in 0..LAYOUT.len() {
-        (cod_barras_arr[i], cod_barras_liq) = dividir_string(cod_barras_liq, LAYOUT[i]);
+    for (cod_barras, layout) in cod_barras_arr.iter_mut().zip(LAYOUT.iter()) {
+        (*cod_barras, cod_barras_liq) = dividir_string(cod_barras_liq, *layout);
 
         // Se o código não for composto apenas por números, dê pânico e feche o programa.
-        let _ = match (&cod_barras_arr[i]).parse::<usize>() {
-            Ok(usize) => usize,
-            Err(_) => panic!("Esse código de barras não é valido, fechando..."),
+        let Ok(_) = cod_barras.parse::<usize>() else {
+            panic!("Esse código de barras não é valido, fechando...");
         };
     }
 
@@ -97,8 +87,8 @@ fn main() -> Result<()> {
         execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
 
         cprint!("<cyan, bold>O código de barras atual é:</> ");
-        for i in 0..LAYOUT.len() {
-            print!("{}", cod_barras_arr[i]);
+        for i in cod_barras_arr.iter() {
+            print!("{}", i);
         }
         print!(".");
 
@@ -146,84 +136,150 @@ fn main() -> Result<()> {
                 disable_raw_mode().unwrap();
 
                 cprintln!("<green, bold>Digite a nova data <i>com barras entre os números</>.</>");
-                let mut valor_tmp: String = String::new();
 
                 loop {
                     let data_tmp: String = NaiveDate::parse_from_str(&cod_barras_arr[4], "%Y%m%d")
                         .unwrap()
                         .format("%d/%m/%Y")
                         .to_string();
-                    valor_tmp = rl.readline_with_initial("> ", (&data_tmp, ""))?;
+                    let Ok(valor_tmp) = NaiveDate::parse_from_str(
+                        &rl.readline_with_initial("> ", (&data_tmp, ""))?,
+                        "%d/%m/%Y",
+                    ) else {
+                        cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
+                        continue;
+                    };
 
-                    match valor_tmp.len() {
-                        10 => (),
-                        _ => {
-                            cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
-                            continue;
-                        }
-                    }
-
-                    cod_barras_arr[4] = match NaiveDate::parse_from_str(&valor_tmp, "%d/%m/%Y") {
-                        Ok(NaiveDate) => NaiveDate,
-                        Err(ParseError) => {
-                            cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
-                            continue;
-                        }
-                    }
-                    .format("%Y%m%d")
-                    .to_string();
+                    cod_barras_arr[4] = valor_tmp.format("%Y%m%d").to_string();
                     break;
                 }
             }
             'g' => {
                 disable_raw_mode().unwrap();
 
-                cprintln!("<green, bold>Digite o novo número da guia:</>");
-                let guia_tmp = &cod_barras_arr[5].parse::<u16>().unwrap();
-                let valor_tmp: String =
-                    rl.readline_with_initial("> ", (&guia_tmp.to_string(), ""))?;
+                loop {
+                    cprintln!("<green, bold>Digite o novo número da guia:</>");
 
-                cod_barras_arr[5] = format!("{:0>7}", valor_tmp);
+                    let Ok(valor_tmp) = rl
+                        .readline_with_initial(
+                            "> ",
+                            (cod_barras_arr[5].trim_start_matches('0'), ""),
+                        )?
+                        .parse::<u16>()
+                    else {
+                        cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
+                        continue;
+                    };
+
+                    cod_barras_arr[5] = format!("{:0>7}", valor_tmp);
+                    break;
+                }
             }
             'p' => {
                 disable_raw_mode().unwrap();
 
-                cprintln!("<green, bold>Digite a nova parcela:</>");
-                let parcela_tmp = &cod_barras_arr[6].parse::<u8>().unwrap();
-                let valor_tmp: String =
-                    rl.readline_with_initial("> ", (&parcela_tmp.to_string(), ""))?;
+                loop {
+                    cprintln!("<green, bold>Digite a nova parcela:</>");
+                    let Ok(valor_tmp) = rl
+                        .readline_with_initial(
+                            "> ",
+                            (cod_barras_arr[6].trim_start_matches('0'), ""),
+                        )?
+                        .parse::<u8>()
+                    else {
+                        cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
+                        continue;
+                    };
 
-                cod_barras_arr[6] = format!("{:0>3}", valor_tmp);
+                    // Se o valor não for entre 1 e 46 (o limite de parcelas aceitas), peça o
+                    // número novamente.
+                    match valor_tmp {
+                        1..=46 => (),
+                        _ => {
+                            cprintln!(
+                            "<yellow, bold>O número de parcelas é inválido, tente novamente.</>"
+                        );
+                            continue;
+                        }
+                    }
+
+                    cod_barras_arr[6] = format!("{:0>3}", valor_tmp);
+                    break;
+                }
             }
             'e' => {
                 disable_raw_mode().unwrap();
 
-                cprintln!("<green, bold>Digite o novo exercício:</>");
-                let exercicio_tmp = &cod_barras_arr[8].parse::<u8>().unwrap();
-                let valor_tmp =
-                    rl.readline_with_initial("> 20", (&exercicio_tmp.to_string(), ""))?;
+                // Pega o ano da data de vencimento como AA, em número.
+                let data_tmp = NaiveDate::parse_from_str(&cod_barras_arr[4], "%Y%m%d")
+                    .unwrap()
+                    .format("%y")
+                    .to_string()
+                    .parse::<u8>()
+                    .unwrap();
 
-                cod_barras_arr[8] = valor_tmp;
+                loop {
+                    cprintln!("<green, bold>Digite o novo exercício:</>");
+                    let Ok(valor_tmp) = rl
+                        .readline_with_initial(
+                            "> 20",
+                            (cod_barras_arr[8].trim_start_matches('0'), ""),
+                        )?
+                        .parse::<u8>()
+                    else {
+                        cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
+                        continue;
+                    };
+
+                    // Se o exercício for no futuro, se comparado ao vencimento,
+                    // Ou for há mais de quatro anos atrás, retorne um erro.
+                    if valor_tmp != data_tmp {
+                        if let 1..=4 = data_tmp as i32 - valor_tmp as i32 {
+                        } else {
+                            // match data_tmp as i32 - valor_tmp as i32 {
+                            //     1..=4 => break,
+                            //     _ => (),
+                            // }
+                            cprintln!("<yellow, bold>Você parece ter digitado um ano diferente do ano de vencimento da guia.</>");
+                            continue;
+                        }
+                    };
+
+                    cod_barras_arr[8] = valor_tmp.to_string();
+                    break;
+                }
             }
             't' => {
                 disable_raw_mode().unwrap();
 
-                cprintln!("<green, bold>Digite o código do novo tributo:</>");
-                let tributo_tmp = &cod_barras_arr[9].parse::<u8>().unwrap();
-                let valor_tmp = rl.readline_with_initial("> ", (&tributo_tmp.to_string(), ""))?;
+                loop {
+                    cprintln!("<green, bold>Digite o código do novo tributo:</>");
+                    let Ok(valor_tmp) = rl
+                        .readline_with_initial(
+                            "> ",
+                            (cod_barras_arr[9].trim_start_matches('0'), ""),
+                        )?
+                        .parse::<u16>()
+                    else {
+                        cprintln!("<yellow, bold>Há um problema com o valor digitado, tente novamente.</>");
+                        continue;
+                    };
 
-                cod_barras_arr[9] = format!("{:0>4}", valor_tmp);
+                    cod_barras_arr[9] = format!("{:0>4}", valor_tmp);
+                    break;
+                }
             }
-            's' | _ => {
+            's' => {
                 let mut valor_tmp: String = String::new();
 
-                for i in 0..=LAYOUT.len() {
-                    valor_tmp += &cod_barras_arr[i];
+                for cod_barras in cod_barras_arr.iter() {
+                    valor_tmp += cod_barras;
                 }
 
                 ctx.set_contents(valor_tmp.to_owned()).unwrap();
                 break;
             }
+            _ => continue,
         }
     }
 

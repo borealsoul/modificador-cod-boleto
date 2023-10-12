@@ -1,6 +1,6 @@
 [package]
 name = "mod_cod_barras"
-version = "0.0.6"
+version = "0.0.92"
 edition = "2021"
 
 [profile.release]
