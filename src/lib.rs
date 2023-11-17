@@ -72,10 +72,16 @@ pub fn lista_cod(cod_barras: &[String; 10]) {
     for (indice, codigo) in cod_barras.iter().enumerate() {
         match indice {
             5 | 6 | 8 | 9 => {
-                let cod_tmp: &u16 = &codigo.parse::<u16>().unwrap();
+                let cod_tmp: &u32 = &codigo.parse::<u32>().unwrap();
 
                 match indice {
-                    5 => cprintln!("<blue, bold>Núm. da <u>G</>uia:</> {cod_tmp}"),
+                    5 => {
+                        if cod_tmp < &10000u32 {
+                            cprintln!("<blue, bold>Núm. da <u>G</>uia:</> {cod_tmp}")
+                        } else {
+                            cprintln!("<blue, bold>Núm. do <u>I</>móvel:</> {cod_tmp}")
+                        }
+                    }
                     6 => cprintln!("<blue, bold><u>P</>arcela:</> {cod_tmp}"),
                     8 => cprintln!("<blue, bold><u>E</>xercício:</> 20{cod_tmp}"),
                     9 => cprintln!("<blue, bold><u>T</>ributo:</> {cod_tmp}"),
