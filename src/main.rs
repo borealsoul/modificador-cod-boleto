@@ -1,8 +1,11 @@
+mod leitortransf;
+
 use chrono::NaiveDate;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use color_print::{cprint, cprintln};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use crossterm::{cursor, execute};
+use leitortransf::ler_código_início;
 use mod_cod_barras::*;
 use rustyline::{DefaultEditor, Result};
 use std::io::stdout;
@@ -18,22 +21,9 @@ fn main() -> Result<()> {
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
 
     // se o conteudo do ctrl-c do usuário tiver 55 carac., tamanho de um código de barras,
-    // pergunte se ele quer usar este.
-    if ctx.get_contents().unwrap().len() == 55 {
-        loop {
-            disable_raw_mode().unwrap();
-            execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
-            cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
-            cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
-            enable_raw_mode().unwrap();
-            break match read_char()? {
-                's' | ' ' => {
-                    _cod_barras_lido = String::from(&ctx.get_contents().unwrap());
-                }
-                'n' => (),
-                _ => continue,
-            };
-        }
+    // pergunte se usuário quer usar este.
+    if ctx.get_contents().unwrap_or(String::from("")).len() == 55 {
+        _cod_barras_lido = ler_código_início(&mut ctx);
     };
 
     disable_raw_mode().unwrap();
