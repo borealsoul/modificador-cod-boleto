@@ -7,6 +7,21 @@ use mod_cod_barras::*;
 use rustyline::{DefaultEditor, Result};
 use std::io::stdout;
 
+pub fn ler_código_início(ctx: &mut ClipboardContext) -> String {
+    loop {
+        disable_raw_mode().unwrap();
+        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+        cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
+        cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
+        enable_raw_mode().unwrap();
+        break match read_char().unwrap() {
+            's' | ' ' => String::from(&ctx.get_contents().unwrap()),
+            'n' => String::from(""),
+            _ => continue,
+        };
+    }
+}
+
 fn main() -> Result<()> {
     // rl é um atalho para read_line de rustyline
     let mut rl = DefaultEditor::new()?;
@@ -18,22 +33,9 @@ fn main() -> Result<()> {
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
 
     // se o conteudo do ctrl-c do usuário tiver 55 carac., tamanho de um código de barras,
-    // pergunte se ele quer usar este.
-    if ctx.get_contents().unwrap().len() == 55 {
-        loop {
-            disable_raw_mode().unwrap();
-            execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
-            cprintln!("<green, bold>Parece que você possui um código de barras copiado, deseja inserir esse?</>");
-            cprintln!("<green, bold><u>S</>im</>/<red, bold><u>N</>ão</>");
-            enable_raw_mode().unwrap();
-            break match read_char()? {
-                's' | ' ' => {
-                    _cod_barras_lido = String::from(&ctx.get_contents().unwrap());
-                }
-                'n' => (),
-                _ => continue,
-            };
-        }
+    // pergunte se usuário quer usar este.
+    if ctx.get_contents().unwrap_or(String::from("")).len() == 55 {
+        _cod_barras_lido = ler_código_início(&mut ctx);
     };
 
     disable_raw_mode().unwrap();
@@ -154,11 +156,11 @@ fn main() -> Result<()> {
                     break;
                 }
             }
-            'g' => {
+            'g' | 'i' => {
                 disable_raw_mode().unwrap();
 
                 loop {
-                    cprintln!("<green, bold>Digite o novo número da guia:</>");
+                    cprintln!("<green, bold>Digite o novo número da guia/imóvel:</>");
 
                     let Ok(valor_tmp) = rl
                         .readline_with_initial(
